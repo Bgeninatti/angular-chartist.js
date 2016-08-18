@@ -1,81 +1,50 @@
-import angular from 'angular';
-import Chartist from 'chartist';
+var chartistModule = angular.module('angular-chartist', []);
+chartistModule.controller('AngularChartistCtrl', function($scope, $element) {
 
-const angularChartistModule = angular.module('angular-chartist', []);
+  $scope.options = $scope.chartOptions() || null;
+  $scope.element = $element[0];
+  $scope.$watch(function() {
+    return {
+      data: $scope.data,
+      chartType: $scope.chartType,
+      chartOptions: $scope.chartOptions(),
+    };
+  }, function(newConfig, oldConfig) {
+    $scope.update(newConfig, oldConfig);
+  }, true);
 
-class AngularChartistCtrl {
-  constructor($scope, $element) {
-    'ngInject';
+  $scope.$on('$destroy', function() {
+    if ($scope.chart) {
+      $scope.chart.detach();
+    }
+  });
 
-    this.data = $scope.data;
-    this.chartType = $scope.chartType;
-
-    this.events = $scope.events() || {};
-    this.options = $scope.chartOptions() || null;
-    this.responsiveOptions = $scope.responsiveOptions() || null;
-
-    this.element = $element[0];
-
-    this.renderChart();
-
-    $scope.$watch(() => {
-      return {
-        data: $scope.data,
-        chartType: $scope.chartType,
-        chartOptions: $scope.chartOptions(),
-        responsiveOptions: $scope.responsiveOptions(),
-        events: $scope.events()
-      };
-    }, this.update.bind(this), true);
-
-    $scope.$on('$destroy', () => {
-      if (this.chart) {
-        this.chart.detach();
-      }
-    });
-  }
-
-  bindEvents() {
-    Object.keys(this.events).forEach((eventName) => {
-      this.chart.on(eventName, this.events[eventName]);
-    });
-  }
-
-  renderChart() {
+  $scope.renderChart = function() {
     // ensure that the chart does not get created without data
-    if (this.data) {
-      this.chart = Chartist[this.chartType](this.element, this.data, this.options, this.responsiveOptions);
-
-      this.bindEvents();
-
-      return this.chart;
+    if ($scope.data) {
+      $scope.chart = Chartist[$scope.chartType]($scope.element, $scope.data, $scope.options);
+      return $scope.chart;
     }
   }
 
-  update(newConfig, oldConfig) {
+  $scope.update = function(newConfig, oldConfig) {
     // Update controller with new configuration
-    this.chartType = newConfig.chartType;
-    this.data = newConfig.data;
-    this.options = newConfig.chartOptions;
-    this.responsiveOptions = newConfig.responsiveOptions;
-    this.events = newConfig.events;
+    $scope.chartType = newConfig.chartType;
+    $scope.data = newConfig.data;
+    $scope.options = newConfig.chartOptions;
 
     // If chart type changed we need to recreate whole chart, otherwise we can update
-    if (!this.chart || newConfig.chartType !== oldConfig.chartType) {
-      this.renderChart();
+    if (!$scope.chart || newConfig.chartType !== oldConfig.chartType) {
+      $scope.renderChart();
     } else {
-      this.chart.update(this.data, this.options);
+      $scope.chart.update($scope.data, $scope.options);
     }
   }
-}
 
-angularChartistModule
+  $scope.renderChart();
+});
 
-.controller('AngularChartistCtrl', AngularChartistCtrl)
-
-.directive('chartist', function() {
-  'ngInject';
-
+chartistModule.directive('chartist', function() {
   return {
     restrict: 'EA',
     scope: {
@@ -83,12 +52,8 @@ angularChartistModule
       data: '=chartistData',
       chartType: '@chartistChartType',
       // optional
-      events: '&chartistEvents',
       chartOptions: '&chartistChartOptions',
-      responsiveOptions: '&chartistResponsiveOptions'
     },
     controller: 'AngularChartistCtrl'
   };
-});
-
-export default angularChartistModule.name;
+})
